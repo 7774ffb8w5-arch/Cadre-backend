@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Next launch · Cadre</title>
+<style>
+:root{color-scheme:dark}body{margin:0;background:#0B0B0F;color:#F2F0FA;font:13px/1.4 'IBM Plex Sans',system-ui,sans-serif}
+.w{display:grid;gap:6px;padding:12px 14px;border:1px solid #2A2A35;border-radius:6px;height:calc(100vh - 2px);box-sizing:border-box}
+.l{font:10.5px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:#847F74;display:flex;justify-content:space-between}
+b{font-size:16px}.m{font:11.5px ui-monospace,Menlo,monospace;color:#847F74}.c{font:500 20px ui-monospace,Menlo,monospace;color:#9A6BFF}
+a{color:#9A6BFF;text-decoration:none}
+</style></head><body>
+<div class="w"><span class="l"><span>Next launch · Cadre</span><span id="when">—</span></span><b id="who">Loading…</b><span class="m" id="meta"></span><span class="c" id="count">—</span><span class="l"><span>CA at launch · never before</span><a id="link" href="https://cadre-us.org" target="_blank" rel="noopener">thetwenty</a></span></div>
+<script>
+// Reads the public feeds; API_BASE comes from the query string (?api=https://api.cadre-us.org) or defaults.
+const api = (new URLSearchParams(location.search).get('api') || 'https://api.cadre-us.org').replace(/\/$/, '');
+const pad2 = n => String(n).padStart(2,'0'); const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+let next = null;
+const rem = ms => { if (ms <= 0) return 'LIVE'; const d = Math.floor(ms/864e5), h = Math.floor(ms%864e5/36e5), m = Math.floor(ms%36e5/6e4), s = Math.floor(ms%6e4/1e3); return d ? `${d}d ${h}h ${pad2(m)}m` : `${pad2(h)}:${pad2(m)}:${pad2(s)}`; };
+async function load(){
+  try {
+    const [slots, seats] = await Promise.all([fetch(api + '/v1/slots').then(r => r.json()), fetch(api + '/v1/seats').then(r => r.json())]);
+    const s = slots.find(x => x.seat && Date.parse(x.time) > Date.now()); if (!s){ document.getElementById('who').textContent = 'No slot booked'; return; }
+    const seat = seats.find(x => x.seat === s.seat); next = Date.parse(s.time); const d = new Date(next);
+    document.getElementById('when').textContent = `${M[d.getUTCMonth()]} ${d.getUTCDate()} · ${pad2(d.getUTCHours())}:00 UTC`;
+    document.getElementById('who').textContent = `Seat ${pad2(seat.seat)} · ${seat.developer}`;
+    document.getElementById('meta').textContent = `score ${seat.score} · #${seat.rank} · bond ${seat.bond_sol} SOL`;
+    document.getElementById('link').href = `https://cadre-us.org/#seat-${pad2(seat.seat)}`;
+  } catch(e){ document.getElementById('who').textContent = 'Feed unavailable'; }
+}
+setInterval(() => { if (next) document.getElementById('count').textContent = rem(next - Date.now()); }, 1000);
+load(); setInterval(load, 60000);
+</script></body></html>

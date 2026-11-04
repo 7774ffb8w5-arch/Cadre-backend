@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:16
+    environment: { POSTGRES_USER: twenty, POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-twenty}", POSTGRES_DB: twenty }
+    ports: ["127.0.0.1:5432:5432"]       # never exposed beyond the host
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U twenty"], interval: 10s, timeout: 3s, retries: 10 }
+    volumes: ["pg:/var/lib/postgresql/data", "../packages/api/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro"]
+  api:
+    build: { context: .., dockerfile: infra/Dockerfile, args: { PKG: api } }
+    env_file: ../.env
+    environment: { DATABASE_URL: "postgres://twenty:${POSTGRES_PASSWORD:-twenty}@db:5432/twenty", TRUST_PROXY: "false", BILLING_WATCHER: "0" }   # billing runs in `jobs`
+    ports: ["127.0.0.1:8080:8080"]       # put a TLS-terminating proxy in front (infra/nginx-headers.conf) and set TRUST_PROXY=true there
+    read_only: true
+    tmpfs: ["/tmp"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    depends_on: { db: { condition: service_healthy } }
+  jobs:                                  # the scheduler: lifecycle, snapshots, scores, season, election, bans, indexer, billing (docs/OPERATIONS.md)
+    build: { context: .., dockerfile: infra/Dockerfile, args: { PKG: api, ENTRY: jobs/runner.js } }
+    env_file: ../.env
+    environment: { DATABASE_URL: "postgres://twenty:${POSTGRES_PASSWORD:-twenty}@db:5432/twenty", BILLING_WATCHER: "0" }
+    read_only: true
+    tmpfs: ["/tmp"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    depends_on: { db: { condition: service_healthy } }
+  bot:
+    build: { context: .., dockerfile: infra/Dockerfile, args: { PKG: bot, ENTRY: index.js } }
+    env_file: ../.env
+    environment: { DATABASE_URL: "postgres://twenty:${POSTGRES_PASSWORD:-twenty}@db:5432/twenty" }
+    read_only: true
+    tmpfs: ["/tmp"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    depends_on: { db: { condition: service_healthy } }
+volumes: { pg: {} }

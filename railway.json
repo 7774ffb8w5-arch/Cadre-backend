@@ -1,0 +1,6 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": { "builder": "DOCKERFILE", "dockerfilePath": "infra/Dockerfile" },
+  "deploy": { "startCommand": "node packages/api/dist/server.js", "healthcheckPath": "/ready", "restartPolicyType": "ON_FAILURE", "cronSchedule": null },
+  "_services": { "api": "this file", "jobs": "second service, same repo and Dockerfile, startCommand `node packages/api/dist/jobs/runner.js`, no health check path", "bot": "third service, startCommand `node packages/bot/dist/index.js`" }
+}
