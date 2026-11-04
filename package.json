@@ -1,0 +1,24 @@
+{
+  "name": "the-twenty",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @twenty/shared && npm run build -w @twenty/scanner && npm run build -w @twenty/bot && npm run build -w @twenty/api",
+    "typecheck": "npm run build && npm run typecheck --workspaces --if-present",
+    "dev:api": "npm run -w @twenty/api dev",
+    "dev:bot": "npm run -w @twenty/bot dev",
+    "scan": "npm run -w @twenty/scanner scan --",
+    "db:migrate": "psql \"$DATABASE_URL\" -f packages/api/db/schema.sql",
+    "test": "npm test --workspaces --if-present",
+    "demo": "npm run -w @twenty/api demo",
+    "dev:jobs": "npm run -w @twenty/api start:jobs",
+    "devnet:check": "npm run -w @twenty/api preflight --",
+    "program:init": "npm run -w @twenty/api program:init --"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
